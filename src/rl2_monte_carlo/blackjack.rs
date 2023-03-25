@@ -1,4 +1,5 @@
 use crate::rl1_finite_markov_decision_process::{ State, Action, Reward, Policy};
+use crate::rl2_monte_carlo::{ Trajectory, Episode};
 use rand::Rng;
 
 #[allow(unused)]
@@ -227,5 +228,100 @@ impl Policy<(usize,usize,bool),BlackJackAction> {
         }
         return vec_result;
     }
+}
+
+#[allow(unused)]
+pub fn blackjack_simulator(policy: Policy<(usize,usize,bool),BlackJackAction>,episode_vector: Vec<Vec<Vec<Vec<Episode<(usize,usize,bool),BlackJackAction,f64>>>>>) -> (Vec<Vec<Vec<Vec<Episode<(usize,usize,bool),BlackJackAction,f64>>>>>,f64)
+    where Policy<(usize,usize,bool),BlackJackAction>: Clone, Vec<Vec<Vec<Vec<Episode<(usize,usize,bool),BlackJackAction,f64>>>>>: Clone, Vec<Vec<Vec<f64>>>:Clone
+{
+    //Cloning
+    let mut bj_policy: Policy<(usize,usize,bool),BlackJackAction> = policy.clone();
+    let mut net_episode_vectors: Vec<Vec<Vec<Vec<Episode<(usize,usize,bool),BlackJackAction,f64>>>>> = episode_vector.clone();
+
+    //Card Deck Processing
+    let mut card_deck : Vec<Card> = vec![];
+    for int_i in 0..4{
+        for int_j in 2..15{//11:Jack,12:Queen,13:King,14:Ace
+            card_deck.push(Card {card : (int_j,int_i)});
+        }
+    }
+
+    //Card State Processing
+    let mut card_state: State<Vec<Vec<Card>>> = State { 
+        state: vec![
+            vec![],           //Player's Card Vector
+            vec![]            //Dealer's Card Vector
+        ] 
+    };
+    #[allow(unused_assignments)]
+    let mut bj_state : State<(usize,usize,bool)> = State {
+        state : (0,0,false)
+    };
+
+    //Random Card Partition
+    //Player: 2 Cards, Dealer 2 Cards
+    for _int_i in 0..2{
+        for int_j in 0..2{
+            let rand_num = random_card(card_deck.len());
+            card_state.state[int_j].push(card_deck.clone()[rand_num]);
+            card_deck.remove(rand_num);
+        }
+    }
+
+    //Player Open 2 Cards and Dealer Open 1 Card
+    bj_state = open_state(card_state.clone());
+
+    //If Player's cards are lower then 12 then Player Always Hits
+    while bj_state.state.0 < 12 {
+        let rand_num = random_card(card_deck.len());
+        card_state.state[0].push(card_deck.clone()[rand_num]);
+        card_deck.remove(rand_num);
+        bj_state = open_state(card_state.clone());
+    }
+
+    //Processing Episode of BlackJack
+    let mut bj_episode : Episode<(usize,usize,bool),BlackJackAction,f64> = Episode { 
+        trajectory: vec![
+            vec![                
+                Trajectory {
+                    state  : bj_state.clone(),
+                    action : Action { action: BlackJackAction::Start },
+                    reward : Reward { reward: 0.0 }
+                }
+            ],
+            vec![                
+                Trajectory {
+                    state  : bj_state.clone(),
+                    action : Action { action: BlackJackAction::Start },
+                    reward : Reward { reward: 0.0 }
+                }
+            ]
+        ], 
+        prob2 : vec![]
+    };
+
+    let next_turn = bj_policy.game(card_deck.clone(), card_state.clone(), bj_state.clone());
+    let mut net_reward: f64 = 0.0;
+    for int_i in 0..next_turn.len() {
+        net_reward += next_turn.clone()[int_i].0.reward * next_turn.clone()[int_i].2;
+    }
+
+    //Renew Episode
+    for int_i in 0..next_turn.len() {
+        bj_episode.trajectory[int_i].push(Trajectory { 
+            state: next_turn.clone()[int_i].5, 
+            action: Action { action: next_turn.clone()[int_i].clone().1} , 
+            reward: next_turn.clone()[int_i].0
+        });
+        bj_episode.prob2.push(next_turn.clone()[int_i].2);
+    }
+
+    if bj_state.state.2 {
+        net_episode_vectors[0][bj_state.state.clone().1][bj_state.state.clone().0-12].push(bj_episode.clone());
+    } else {
+        net_episode_vectors[1][bj_state.state.clone().1][bj_state.state.clone().0-12].push(bj_episode.clone());
+    }
+
+    return (net_episode_vectors,net_reward);
 }
 
