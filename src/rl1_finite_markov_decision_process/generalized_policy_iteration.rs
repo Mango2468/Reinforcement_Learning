@@ -10,7 +10,7 @@ pub struct GPI<S,T,U> {
 impl<S: Clone + PartialEq+ std::cmp::Ord,T: Clone + PartialEq> GPI<S,T,f64>{
 
     #[allow(unused)]
-    pub fn evaluation(&self,vec_exp_res: Vec<Vec<ExpResult<S,T,f64>>>,discount: f64) -> GPI<S,T,f64>
+    pub fn evaluation_dp(&self,vec_exp_res: Vec<Vec<ExpResult<S,T,f64>>>,discount: f64) -> GPI<S,T,f64>
         where Policy<S,T>: Clone,
               ExpResult<S,T,f64> : Clone,
               State<S> : Clone + Copy + PartialEq,
@@ -48,7 +48,7 @@ impl<S: Clone + PartialEq+ std::cmp::Ord,T: Clone + PartialEq> GPI<S,T,f64>{
     #[allow(unused)]
     //Using Greedy Algorithm with Epsilon Soft Exploring
     //Epsilon Soft means the minimal probablity of doing Exploring
-    pub fn evaluated_greedy(&self,vec_exp_res: Vec<Vec<ExpResult<S,T,f64>>>,discount: f64,epsilon_soft: f64) -> (GPI<S,T,f64>,f64) 
+    pub fn evaluated_greedy_dp(&self,vec_exp_res: Vec<Vec<ExpResult<S,T,f64>>>,discount: f64,epsilon_soft: f64) -> (GPI<S,T,f64>,f64) 
         where   Policy<S,T>: Clone,
                 ExpResult<S,T,f64> : Clone,
                 State<S> : Clone + Copy + PartialEq,
@@ -58,7 +58,7 @@ impl<S: Clone + PartialEq+ std::cmp::Ord,T: Clone + PartialEq> GPI<S,T,f64>{
     {
         let mut dispersion: f64 = 0.0;
         let mut before_gpi: GPI<S,T,f64> = self.clone();
-        let mut after_gpi: GPI<S,T,f64> = self.evaluation(vec_exp_res.clone(), discount);
+        let mut after_gpi: GPI<S,T,f64> = self.evaluation_dp(vec_exp_res.clone(), discount);
 
         //Renewing Dispersion using every policy's state0 elements
         for int_i in 0..self.policy.state0.len() {

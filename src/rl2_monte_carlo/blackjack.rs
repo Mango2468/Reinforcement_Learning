@@ -1,4 +1,4 @@
-use crate::rl1_finite_markov_decision_process::{ State, Reward, Policy};
+use crate::rl1_finite_markov_decision_process::{ State, Action, Reward, Policy};
 use rand::Rng;
 
 #[allow(unused)]
@@ -228,3 +228,4 @@ impl Policy<(usize,usize,bool),BlackJackAction> {
         return vec_result;
     }
 }
+

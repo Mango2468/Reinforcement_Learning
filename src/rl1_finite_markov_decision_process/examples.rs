@@ -16,6 +16,9 @@ mod rl1_finite_markov_decision_process{
     mod value;
     pub use value::*;
 
+    mod generalized_policy_iteration;
+    pub use generalized_policy_iteration::*;
+
 }
 mod rl2_monte_carlo {
     mod monte_carlo;
@@ -23,14 +26,11 @@ mod rl2_monte_carlo {
 
     mod blackjack;
     pub use blackjack::*;
-
-    mod generalized_policy_iteration;
-    pub use generalized_policy_iteration::*;
 }
 
 
-use rl1_finite_markov_decision_process::{State, Action, Reward, Policy, ExpResult};
-use rl2_monte_carlo::{Card, BlackJackAction,Trajectory,Episode,GPI,open_state,random_card};
+use rl1_finite_markov_decision_process::{State, Action, Reward, Policy, ExpResult,GPI};
+use rl2_monte_carlo::{Card, BlackJackAction,Trajectory,Episode,open_state,random_card};
 // use crate::ml2_decision_tree::{DecisionTree,NodeLeaf}
 
 use rl1_finite_markov_decision_process::{Value, policy_value};
@@ -117,7 +117,7 @@ fn main() {
         //Set Basic GPI
         let gpi: GPI<(isize,isize),(isize,isize),f64> = GPI { policy: policy.clone(), value: ex_val.clone() };
         //Using General Policy Iteration with Dynamic Programming Algorithm
-        let set = gpi.clone().evaluated_greedy(vec_exp_res.clone(), 0.9, 0.00);
+        let set = gpi.clone().evaluated_greedy_dp(vec_exp_res.clone(), 0.9, 0.00);
 
         // calculate the dispersion between Ex_Val and Policy_Expected Value
         int_dispersion = set.clone().1;

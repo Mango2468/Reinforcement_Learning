@@ -16,6 +16,9 @@ mod rl1_finite_markov_decision_process{
     mod value;
     pub use value::*;
 
+    mod generalized_policy_iteration;
+    pub use generalized_policy_iteration::*;
+
 }
 mod rl2_monte_carlo {
     mod monte_carlo;
@@ -23,9 +26,6 @@ mod rl2_monte_carlo {
 
     mod blackjack;
     pub use blackjack::*;
-
-    mod generalized_policy_iteration;
-    pub use generalized_policy_iteration::*;
 }
 
 
