@@ -26,93 +26,105 @@ mod rl2_monte_carlo {
 
     mod blackjack;
     pub use blackjack::*;
+
+    mod right_turn;
+    pub use right_turn::*;
 }
 
 
 use rl1_finite_markov_decision_process::{State, Action, Reward, Policy};
-use rl2_monte_carlo::{Card, BlackJackAction,Trajectory,Episode,open_state,random_card,blackjack_simulator};
+use rl2_monte_carlo::{Trajectory,Episode, Track, Car, CarAction,car_race,car_race_simulator,random_actor_mili};
 // use crate::ml2_decision_tree::{DecisionTree,NodeLeaf}
 
 fn main() {
-    //Decide repeats
-    let repeating: usize = 5000;
-    //Initialize episode & reward net vectors
-    let mut net_episode_vectors : Vec<Vec<Vec<Vec<Episode<(usize,usize,bool),BlackJackAction,f64>>>>> = vec![vec![],vec![]];
-    let mut net_reward_vectors : Vec<Vec<Vec<f64>>> = vec![vec![],vec![]];
-    let mut sum_net_reward: f64 = 0.0;
-    for int_i in 0..12{
-        net_episode_vectors[0].push(vec![]);
-        net_episode_vectors[1].push(vec![]);
-        net_reward_vectors[0].push(vec![]);
-        net_reward_vectors[1].push(vec![]);
-        for _int_j in 12..22{
-            net_episode_vectors[0][int_i].push(vec![]);
-            net_episode_vectors[1][int_i].push(vec![]);
-            net_reward_vectors[0][int_i].push(0.0);
-            net_reward_vectors[1][int_i].push(0.0);
-        }
-    } 
-
-    //Processing Policy of BlackJack
-    let mut bj_policy: Policy<(usize,usize,bool),BlackJackAction> = Policy { state0: vec![], prob1: vec![], actions: vec![] };
-
-    //Initialize Policy which fits BlackJack 
-    bj_policy.actions=vec![Action { action : BlackJackAction::Stick},Action { action : BlackJackAction::Hit}];
-    for int_i in 0..2 {
-        for int_j in 0..12{
-            for int_k in 12..22{
-                if int_k < 20 {
-                    if int_i == 0 {
-                        bj_policy.state0.push(State { state: (int_k,int_j,true) });
-                        bj_policy.prob1.push(vec![0.0,1.0]);
-                    } else {
-                        bj_policy.state0.push(State { state: (int_k,int_j,false) });
-                        bj_policy.prob1.push(vec![0.0,1.0]);
-                    }
-                } else {
-                    if int_i == 0 {
-                        bj_policy.state0.push(State { state: (int_k,int_j,true) });
-                        bj_policy.prob1.push(vec![1.0,0.0]);
-                    } else {
-                        bj_policy.state0.push(State { state: (int_k,int_j,false) });
-                        bj_policy.prob1.push(vec![1.0,0.0]);
-                    }
-                }
+    let mut track1 : Track = Track { area: vec![] };
+    //Track1 Processing
+    {    for int_i in 0..32 {
+        track1.area.push(vec![]);
+        if int_i < 26 {
+            for _int_j in 0..9{
+                track1.area[int_i].push(true);
+            }
+            for _int_j in 9..17{
+                track1.area[int_i].push(false);
+            }
+        } else {
+            for _int_j in 0..17 {
+                track1.area[int_i].push(true);
             }
         }
     }
-    
-    //Repeat Episode
-    for _int_z in 0..repeating{
-        let bj_simul = blackjack_simulator(bj_policy.clone(), net_episode_vectors);
-        net_episode_vectors = bj_simul.0;
-        sum_net_reward += bj_simul.1;
-    }
+    track1.area[25][9] = true;
+    for int_i in 0..32 {
+        if int_i < 3 {
+            for int_j in 0..3{
+                track1.area[int_i][int_j] = false;
+            }
+        } else if int_i < 10 {
+            for int_j in 0..2{
+                track1.area[int_i][int_j] = false;
+            }
+        } else if int_i < 18 {
+            track1.area[int_i][0] = false;
+        } else if int_i < 28{
 
-    for int_i in 0..2{
-        for int_j in 0..12{
-            for int_k in 12..22{
-                for int_l in 0..net_episode_vectors[int_i][int_j][int_k-12].len(){
-                    net_reward_vectors[int_i][int_j][int_k-12] += net_episode_vectors[int_i][int_j][int_k-12].clone()[int_l].trajectory[0].last().unwrap().reward.reward/net_episode_vectors[int_i][int_j][int_k-12].len() as f64*net_episode_vectors[int_i][int_j][int_k-12].clone()[int_l].prob2[0];
-                    net_reward_vectors[int_i][int_j][int_k-12] += net_episode_vectors[int_i][int_j][int_k-12].clone()[int_l].trajectory[1].last().unwrap().reward.reward/net_episode_vectors[int_i][int_j][int_k-12].len() as f64*net_episode_vectors[int_i][int_j][int_k-12].clone()[int_l].prob2[1];
-                }
+        } else if int_i < 29 {
+            track1.area[int_i][0] = false;
+        } else if int_i < 31 {
+            for int_j in 0..2{
+                track1.area[int_i][int_j] = false;
+            }
+        } else {
+            for int_j in 0..3{
+                track1.area[int_i][int_j] = false;
             }
         }
     }
-    
-    sum_net_reward = sum_net_reward/repeating as f64;
+    for int_i in 0.. track1.area.len(){
+        println!("layer: {} vector :{:?}",int_i, track1.area[int_i]);
+        println!("-------------------------------------------------")
+    }}
 
-    for int_i in 0..2{
-        for int_j in 0..12{
-            println!("bool : {:?} , dealer : {:?}, net_reward : {:?}" ,int_i,int_j,net_reward_vectors[int_i][int_j]);
-            println!("------------------------------------------------------------------");
-            // for int_k in 12..22{
-            //     for int_l in 0..net_episode_vectors[int_i][int_j][int_k-12].len(){
-            //         println!("bool : {:?} , dealer : {:?}, player : {:?}, net_reward : {:?}" ,int_i,int_j,int_k,net_episode_vectors[int_i][int_j][int_k-12][int_l].trajectory);
-            //         println!("------------------------------------------------------------------");
-            //     }
-            // }
+    let mut car_state: State<Car> = State { state: Car { position: (0,3), velocity: (0,0), inside: true } };
+
+    let mut car_action: Vec<Action<CarAction>> = vec![
+        Action {action: CarAction::Accel { x: -1, y: -1 }},
+        Action {action: CarAction::Accel { x: -1, y:  0 }},
+        Action {action: CarAction::Accel { x: -1, y:  1 }},
+        
+        Action {action: CarAction::Accel { x:  0, y: -1 }},
+        Action {action: CarAction::Accel { x:  0, y:  0 }},
+        Action {action: CarAction::Accel { x:  0, y:  1 }},
+
+        Action {action: CarAction::Accel { x:  1, y: -1 }},
+        Action {action: CarAction::Accel { x:  1, y:  0 }},
+        Action {action: CarAction::Accel { x:  1, y:  1 }},
+
+        Action {action: CarAction::Error { x:  0, y:  0 }},
+    ];
+
+    car_state = car_race(track1.clone(), car_state.clone(), car_action.clone()[2],Reward { reward: 0.0 }).0;
+    println!("{:?}",car_state.clone());
+
+
+    let mut cr_policy: Policy<(isize,isize,bool),CarAction> = Policy { 
+        state0: vec![], 
+        prob1: vec![], 
+        actions: car_action.clone() 
+    };
+    {
+        for int_i in 0..32{
+            for int_j in 0..17{
+                cr_policy.state0.push(State { state: (int_i,int_j,track1.area.clone()[int_i as usize][int_j as usize]) });
+                cr_policy.prob1.push(vec![0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1]);
+            }
+        }
+        for int_i in 0..cr_policy.state0.len(){
+            println!("state0: {:?} / prob1: {:?}", cr_policy.state0[int_i].clone().state,cr_policy.prob1[int_i].clone());
         }
     }
-    println!("{:?}",sum_net_reward);
+
+    car_race_simulator(track1.clone(), cr_policy.clone());
+    
 }
+

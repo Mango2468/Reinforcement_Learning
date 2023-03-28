@@ -325,3 +325,87 @@ pub fn blackjack_simulator(policy: Policy<(usize,usize,bool),BlackJackAction>,ep
     return (net_episode_vectors,net_reward);
 }
 
+#[allow(unused)]
+pub fn virtual_machine(policy: Policy<(usize,usize,bool),BlackJackAction>,repeating: usize, epsilon_soft: f64) -> Policy<(usize,usize,bool),BlackJackAction>
+    where State<(usize,usize,bool)>: Ord,
+{
+    //Initialize episode & reward net vectors
+    let mut net_episode_vectors : Vec<Vec<Vec<Vec<Episode<(usize,usize,bool),BlackJackAction,f64>>>>> = vec![vec![],vec![]];
+    let mut net_reward_vectors : Vec<Vec<Vec<Vec<f64>>>> = vec![vec![],vec![]];
+    let mut sum_net_reward: f64 = 0.0;
+    for int_i in 0..12{
+        net_episode_vectors[0].push(vec![]);
+        net_episode_vectors[1].push(vec![]);
+        net_reward_vectors[0].push(vec![]);
+        net_reward_vectors[1].push(vec![]);
+        for _int_j in 12..22{
+            net_episode_vectors[0][int_i].push(vec![]);
+            net_episode_vectors[1][int_i].push(vec![]);
+            net_reward_vectors[0][int_i].push(vec![0.0,0.0]);
+            net_reward_vectors[1][int_i].push(vec![0.0,0.0]);
+        }
+    } 
+
+    let mut bj_policy = policy.clone();
+
+    //Repeat Episode
+    for _int_z in 0..repeating{
+        let bj_simul = blackjack_simulator(bj_policy.clone(), net_episode_vectors);
+        net_episode_vectors = bj_simul.0;
+        sum_net_reward += bj_simul.1;
+    }
+
+    sum_net_reward = sum_net_reward/repeating as f64;
+
+    //Renewing Net Reward Vector's components
+    for int_i in 0..2{//state.2
+        for int_j in 0..12{//state.1
+            for int_k in 12..22{//state.0
+                for int_l in 0..net_episode_vectors[int_i][int_j][int_k-12].len(){
+                    for int_m in 0..bj_policy.actions.len(){
+                        net_reward_vectors[int_i][int_j][int_k-12][int_m] += net_episode_vectors[int_i][int_j][int_k-12].clone()[int_l].trajectory[int_m].last().unwrap().reward.reward/net_episode_vectors[int_i][int_j][int_k-12].len() as f64;
+                    }
+                }
+                let mut max_vector: Vec<usize> = vec![];
+                let mut max_value: f64 = -1.0;
+                for int_m in 0..bj_policy.actions.len(){
+                    if max_value < net_reward_vectors[int_i][int_j][int_k-12][int_m] {
+                        max_value = net_reward_vectors[int_i][int_j][int_k-12][int_m];
+                    }
+                }
+                for int_m in 0..bj_policy.actions.len(){
+                    if max_value - net_reward_vectors[int_i][int_j][int_k-12][int_m] == 0.0 {
+                        max_vector.push(int_m);
+                    }
+                }
+                
+                match bj_policy.state0.clone().binary_search(&State { state: (int_k,int_j,if int_i == 0 {true} else {false}) }){
+                    Ok(u) => {
+                        let b: usize = u;
+                        for int_m in 0..bj_policy.actions.len(){
+                            match max_vector.binary_search(& int_m) {
+                                Ok(_)  => bj_policy.prob1[b][int_m] = (1.0 - epsilon_soft)/max_vector.len() as f64 + epsilon_soft/bj_policy.actions.len() as f64,
+                                Err(_) => bj_policy.prob1[b][int_m] = epsilon_soft/bj_policy.actions.len() as f64
+                            }
+                        }
+                    },
+                    Err(_) => {}
+                }
+            }
+        }
+    }
+
+    // //Printing Net Reward Vector's components
+    // for int_i in 0..2{
+    //     for int_j in 0..12{
+    //         println!("bool : {:?} , dealer : {:?}, net_reward : {:?}" ,int_i,int_j,net_reward_vectors[int_i][int_j]);
+    //         println!("------------------------------------------------------------------");
+    //     }
+    // }
+    // Printing Policy Probablities
+    for int_i in 0.. bj_policy.prob1.len(){
+        println!("state: {:?}, prob1: {:?}", bj_policy.clone().state0[int_i],bj_policy.clone().prob1[int_i]);
+    }
+    println!("{:?}",sum_net_reward);
+    return bj_policy;
+}
