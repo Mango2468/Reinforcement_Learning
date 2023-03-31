@@ -58,13 +58,17 @@ pub fn car_race(track: Track, state: State<Car>, action: Action<CarAction>,rewar
 
 
     if s.state.inside == false {
-        s.state.position = (0,rand::thread_rng().gen_range(3..9));
-        s.state.velocity = (0,0);
-        s.state.inside = true;
-        return (s,Reward { reward: reward.reward -1.0 });
+        if s.state.position.1 > 16 && s.state.position.0 >= 24 && s.state.position.0 <= 33 {
+            return (s,Reward { reward: reward.reward + 70.0 });
+        }else {
+            s.state.position = (0,rand::thread_rng().gen_range(3..9));
+            s.state.velocity = (0,0);
+            s.state.inside = true;
+            return (s,Reward { reward: reward.reward -1.0 });
+        }
     } else {
         if s.state.position.1 == 16 {
-            return (s,Reward { reward: reward.reward + 10000.0 });
+            return (s,Reward { reward: reward.reward + 70.0 });
         } else {
             return (s,Reward { reward: reward.reward -1.0});
         }
@@ -73,38 +77,53 @@ pub fn car_race(track: Track, state: State<Car>, action: Action<CarAction>,rewar
 }
 
 #[allow(unused)]
-pub fn car_race_simulator(track: Track ,policy: Policy<(isize,isize,bool),CarAction>){
+pub fn car_race_simulator(track: Track ,car: (isize,isize,isize,isize),policy: Policy<(isize,isize,isize,isize,bool),CarAction>) -> Episode<(isize,isize,isize,isize,bool),CarAction,f64> {
     let track1: Track = track.clone();
-    let mut race: (State<Car>,Reward<f64>) = (State { state: Car { position: (0,3), velocity: (0,0), inside: true } },Reward { reward: -1.0});
 
-    let mut trajectory: Vec<Trajectory<(isize,isize,bool),CarAction,f64>>
-        =vec![ ];
-    trajectory.push(
-        Trajectory { 
-            state: State { state: (race.0.state.position.0,race.0.state.position.1,race.0.state.inside) }, 
-            action: Action { action: CarAction::Start { x: 0, y: 0 } } ,
-            reward: race.1
-        }
-    );
-    let mut int_repeat: usize = 0;
-    while trajectory.last().unwrap().reward.reward < 0.0 && int_repeat < 10000{
-        let states = State { state: (race.0.state.position.0,race.0.state.position.1,race.0.state.inside) };
-        race = car_race(track1.clone(), race.0.clone(), policy.actions.clone()[random_actor_mili(policy.clone().prob1[policy.clone().state0.binary_search(& states.clone()).unwrap()].clone())] , race.1.clone()); 
+    
+    let mut cr_episode: Episode<(isize,isize,isize,isize,bool),CarAction,f64> 
+        = Episode { 
+            trajectory: vec![vec![],vec![],vec![],vec![],vec![],vec![],vec![],vec![],vec![],vec![]], 
+            prob2:  policy.prob1[policy.clone().state0.binary_search(&State { state: (car.0,car.1,car.2,car.3,track1.area[car.0 as usize][car.1 as usize]) }).unwrap()].clone()
+        };
+    
+    for int_i in 0..policy.actions.len(){
+        let mut race: (State<Car>,Reward<f64>) = (State { state: Car { position: (car.0,car.1), velocity: (car.2,car.3), inside: true } },Reward { reward: -1.0});
+        let mut trajectory: Vec<Trajectory<(isize,isize,isize,isize,bool),CarAction,f64>>=vec![ ];
+        race = car_race(track1.clone(), race.0.clone(), policy.actions.clone()[int_i], race.1.clone()); 
         trajectory.push(
             Trajectory { 
-                state: states.clone(), 
-                action: policy.actions.clone()[random_actor_mili(policy.clone().prob1[policy.clone().state0.binary_search(& states.clone()).unwrap()].clone())],
+                state: State { state: (race.0.state.position.0,race.0.state.position.1,race.0.state.velocity.0,race.0.state.velocity.1,race.0.state.inside) }, 
+                action: policy.actions.clone()[int_i] ,
                 reward: race.1
             }
         );
-        println!("repeat: {} trajec: {:?}",int_repeat,trajectory.clone().last().unwrap());
-        println!("-------------------------------------------");
-        int_repeat += 1;
+        let mut int_repeat: usize = 0;
+        while trajectory.last().unwrap().reward.reward < 0.0 && int_repeat < 70{
+            let states = State { state: (race.0.state.position.0,race.0.state.position.1,race.0.state.velocity.0,race.0.state.velocity.1,race.0.state.inside) };
+            race = car_race(track1.clone(), race.0.clone(), policy.actions.clone()[random_actor_mili(policy.clone().prob1[policy.clone().state0.binary_search(& states.clone()).unwrap()].clone())] , race.1.clone()); 
+            trajectory.push(
+                Trajectory { 
+                    state: states.clone(), 
+                    action: policy.actions.clone()[random_actor_mili(policy.clone().prob1[policy.clone().state0.binary_search(& states.clone()).unwrap()].clone())],
+                    reward: race.1
+                }
+            );
+            // println!("repeat: {} trajec: {:?}",int_repeat,trajectory.clone().last().unwrap());
+            // println!("-------------------------------------------");
+            int_repeat += 1;
+        }
+
+        cr_episode.trajectory[int_i] = trajectory.clone();
     }
+    return cr_episode;
+    
+
 
 }
 
 #[allow(unused)]
+
 pub fn random_actor_mili(vector: Vec<f64>) -> usize{
     let mut int_vector: Vec<usize> = vec![];
     let mut sum_vector: Vec<usize> = vec![];
