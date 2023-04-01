@@ -123,7 +123,6 @@ pub fn car_race_simulator(track: Track ,car: (isize,isize,isize,isize),policy: P
 }
 
 #[allow(unused)]
-
 pub fn random_actor_mili(vector: Vec<f64>) -> usize{
     let mut int_vector: Vec<usize> = vec![];
     let mut sum_vector: Vec<usize> = vec![];

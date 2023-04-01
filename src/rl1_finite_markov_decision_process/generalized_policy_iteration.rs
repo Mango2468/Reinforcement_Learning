@@ -1,4 +1,5 @@
 use crate::rl1_finite_markov_decision_process::{ State, Action, Reward, Policy, ExpResult, Value};
+use crate::rl2_monte_carlo::{Episode,Trajectory,random_actor};
 
 #[allow(unused)]
 #[derive(Debug, Clone)]
@@ -8,7 +9,7 @@ pub struct GPI<S,T,U> {
 }
 
 impl<S: Clone + PartialEq+ std::cmp::Ord,T: Clone + PartialEq> GPI<S,T,f64>{
-
+    ///Evaluates State Value of Policy in Dynamic Programming
     #[allow(unused)]
     pub fn evaluation_dp(&self,vec_exp_res: Vec<Vec<ExpResult<S,T,f64>>>,discount: f64) -> GPI<S,T,f64>
         where Policy<S,T>: Clone,
@@ -46,8 +47,8 @@ impl<S: Clone + PartialEq+ std::cmp::Ord,T: Clone + PartialEq> GPI<S,T,f64>{
 
 
     #[allow(unused)]
-    //Using Greedy Algorithm with Epsilon Soft Exploring
-    //Epsilon Soft means the minimal probablity of doing Exploring
+    ///Using Greedy Algorithm with Epsilon Soft Exploring in Dynamic Programming
+    ///Epsilon Soft means the minimal probablity of doing Exploring
     pub fn evaluated_greedy_dp(&self,vec_exp_res: Vec<Vec<ExpResult<S,T,f64>>>,discount: f64,epsilon_soft: f64) -> (GPI<S,T,f64>,f64) 
         where   Policy<S,T>: Clone,
                 ExpResult<S,T,f64> : Clone,
@@ -99,5 +100,122 @@ impl<S: Clone + PartialEq+ std::cmp::Ord,T: Clone + PartialEq> GPI<S,T,f64>{
         return (after_gpi,dispersion);
     }
 
+///Epsilon Soft Monte Carlo Episode Processor
+#[allow(unused)]
+pub fn episode_mc<F: Fn(State<S>,Action<T>,Reward<f64>) -> (State<S>,Reward<f64>) >(mc_state: State<S>,mc_policy: Policy<S,T>,function: F,repeat: usize) -> Episode<S,T,f64>
+    where State<S>   : Clone + PartialEq + PartialOrd + Ord,
+          Action<T>  : Clone + PartialEq + PartialOrd + Ord,
+          Policy<S,T>: Clone + PartialEq + PartialOrd,
+          S: Clone + PartialEq + PartialOrd + Ord,
+          T: Clone + PartialEq + PartialOrd + Ord,
+{   
+    //Make empty episode lists
+    let mut mc_episode: Episode<S,T,f64> 
+    = Episode { 
+        trajectory: vec![], 
+        prob2: mc_policy.prob1[mc_policy.state0.binary_search(&mc_state.clone()).unwrap()].clone()
+    };
+    for int_i in 0..mc_episode.prob2.len(){
+        mc_episode.trajectory.push(vec![]);
+    }
+
+    for int_i in 0..mc_policy.actions.len(){
+        //Initialize Trajectory
+        let mut states: State<S> = mc_state.clone();
+        let mut state_reward: (State<S>,Reward<f64>) = (mc_state.clone(),Reward { reward: 0.0});
+        let mut trajectory: Vec<Trajectory<S,T,f64>> = vec![];
+        state_reward = function(state_reward.0.clone(),mc_policy.actions[int_i].clone(),state_reward.1.clone());
+        trajectory.push(
+            Trajectory { 
+                state: states.clone(), 
+                action: mc_policy.actions[int_i].clone(), 
+                reward: state_reward.1.clone() 
+            }
+        );
+
+        //Repeating Processing Episodes
+        let mut int_repeat1: usize = 0;
+        let mut random_num : usize = 0;
+        while trajectory.last().unwrap().reward.reward < 0.0 && int_repeat1 < repeat {
+            states = state_reward.0.clone();
+            random_num = random_actor(mc_policy.prob1[mc_policy.state0.binary_search(& states.clone()).unwrap()].clone());
+            state_reward = function(state_reward.0.clone(),mc_policy.actions[random_num].clone(),state_reward.1.clone());
+            trajectory.push(
+                Trajectory { 
+                    state: states.clone(), 
+                    action: mc_policy.actions[random_num].clone(), 
+                    reward: state_reward.1.clone() 
+                }
+            );
+            int_repeat1 += 1;
+        }
+        mc_episode.trajectory[int_i] = trajectory.clone();
+    }
+    return mc_episode;
 }
+
+///Evaluate Action Value in Monte Carlo Algorithm
+#[allow(unused)]
+pub fn evaluate_action_mc<F: Fn(State<S>,Action<T>,Reward<f64>) -> (State<S>,Reward<f64>) >(mc_state: State<S>,mc_policy: Policy<S,T>,function: F,repeat1: usize, repeat2: usize) -> GPI<S,T,f64>
+    where State<S>   : Clone + PartialEq + PartialOrd + Ord,
+          Action<T>  : Clone + PartialEq + PartialOrd + Ord,
+          Policy<S,T>: Clone + PartialEq + PartialOrd,
+          S: Clone + PartialEq + PartialOrd + Ord,
+          T: Clone + PartialEq + PartialOrd + Ord,
+          F: Clone
+{
+    let mut ea_episode: Vec<Episode<S,T,f64>> = vec![];
+    for int_i in 0..repeat2{
+        ea_episode.push(Self::episode_mc(mc_state.clone(), mc_policy.clone(), function.clone(), repeat1));
+    }
+    let mut ea_gpi: GPI<S,T,f64> = GPI { 
+        policy: mc_policy.clone(), 
+        value: vec![] };
+    for int_i in 0..mc_policy.actions.len(){
+        ea_gpi.value.push(Value { value: 0.0 });
+        let mut vec_value: Vec<f64> = vec![];
+        for int_j in 0..repeat2{
+            ea_gpi.value[int_i].value += ea_episode[int_j].trajectory[int_i].clone().last().unwrap().reward.reward / repeat2 as f64;
+        }
+    }
+    return ea_gpi;
+}
+
+///Using Greedy Algorithm with Epsilon Soft Exploring in Monte Carlo Algorithm
+#[allow(unused)]
+pub fn evaluated_greedy_mc<F: Fn(State<S>,Action<T>,Reward<f64>) -> (State<S>,Reward<f64>) >(mc_state: State<S>,mc_policy: Policy<S,T>,function: F,repeat1: usize, repeat2: usize,epsilon_soft: f64) -> GPI<S, T, f64>
+    where   State<S>   : Clone + PartialEq + PartialOrd + Ord,
+            Action<T>  : Clone + PartialEq + PartialOrd + Ord,
+            Policy<S,T>: Clone + PartialEq + PartialOrd,
+            S: Clone + PartialEq + PartialOrd + Ord,
+            T: Clone + PartialEq + PartialOrd + Ord,
+            F: Clone
+{
+    let mut egmc_gpi: GPI<S, T, f64> = Self::evaluate_action_mc(mc_state.clone(), mc_policy.clone(), function.clone(), repeat1, repeat2);
+    let mut vec_compare: Vec<usize> = vec![];
+
+    let mut compare: f64 = -10000.0;
+    for int_i in 0..mc_policy.actions.len(){
+        if compare < egmc_gpi.value[int_i].clone().value {
+            compare = egmc_gpi.value[int_i].clone().value;
+        }
+    }
+    for int_i in 0..mc_policy.actions.len(){
+        if (compare - egmc_gpi.value[int_i].clone().value) <= 0.001 {
+            vec_compare.push(int_i);
+        }
+    }
+    for int_i in 0..mc_policy.actions.len(){
+        egmc_gpi.policy.prob1[egmc_gpi.policy.state0.binary_search(&mc_state.clone()).unwrap()][int_i] = 
+            match vec_compare.binary_search(&int_i){
+                Ok(_) => (1.0 - epsilon_soft)/vec_compare.len() as f64 + epsilon_soft/egmc_gpi.policy.actions.len() as f64 ,
+                Err(_) => epsilon_soft/egmc_gpi.policy.actions.len() as f64
+            }
+    }
+    return egmc_gpi;
+}
+
+}
+
+
 

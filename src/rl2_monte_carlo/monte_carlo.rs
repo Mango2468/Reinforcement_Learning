@@ -1,4 +1,7 @@
-use crate::rl1_finite_markov_decision_process::{ State, Action, Reward};
+use std::f32::consts::E;
+
+use crate::rl1_finite_markov_decision_process::{ State, Action, Reward, Policy, GPI, Value};
+use rand::Rng;
 
 /// Monte Carlo's public Structure
 /// 
@@ -48,6 +51,30 @@ pub struct Trajectory<S,T,U> {
     pub state : State<S>,
     pub action: Action<T>,
     pub reward: Reward<U>
+}
+
+#[allow(unused)]
+pub fn random_actor(vector: Vec<f64>) -> usize{
+    let mut int_vector: Vec<usize> = vec![];
+    let mut sum_vector: Vec<usize> = vec![];
+    let mut int_a: usize = 0;
+    for int_i in 0..vector.len(){
+        int_vector.push((vector[int_i]*1000.0 )as usize) ;
+        int_a +=int_vector.clone()[int_i];
+        if int_i == 0 {
+            sum_vector.push(int_vector.clone()[int_i]);
+        } else {
+            sum_vector.push(int_vector.clone()[int_i] + sum_vector.clone()[int_i-1]);
+        }
+    }
+    let random_number: usize = rand::thread_rng().gen_range(0..int_a);
+    let mut results: usize = 0;
+    for int_i in 1..vector.len(){
+        if random_number > sum_vector[int_i-1] && random_number < sum_vector[int_i] && int_vector[int_i] != 0{
+            results = int_i;
+        } 
+    }
+    return results;
 }
 
 
