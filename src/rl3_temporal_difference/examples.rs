@@ -39,9 +39,9 @@ mod rl3_temporal_difference {
     pub use q_learning::*;
 }
 
-use rl1_finite_markov_decision_process::{State, Action, Reward, Policy,evaluate_td};
+use rl1_finite_markov_decision_process::{State, Action, Reward, Policy};
 use rl2_monte_carlo::{Trajectory,random_actor};
-// use rl3_temporal_difference::{evaluate_td};
+use rl3_temporal_difference::{evaluate_td};
 // use crate::ml2_decision_tree::{DecisionTree,NodeLeaf}
 
 fn main() {
