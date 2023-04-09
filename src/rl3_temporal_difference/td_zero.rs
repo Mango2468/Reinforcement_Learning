@@ -142,3 +142,6 @@ impl<T: PartialEq + Clone> Searchable<T> for Vec<T>{
         }
     }
 }
+
+
+

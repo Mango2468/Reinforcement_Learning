@@ -1,4 +1,3 @@
-use std::fmt::Debug;
 mod la1_linear_algebra{
     mod matrix;
     pub use matrix::*;
@@ -39,8 +38,8 @@ mod rl3_temporal_difference {
     pub use q_learning::*;
 }
 
-use rl1_finite_markov_decision_process::{State, Action, Reward, Policy,evaluate_td};
-use rl2_monte_carlo::{Trajectory,random_actor};
+use rl1_finite_markov_decision_process::{State, Action, Reward, Policy,evaluate_expected_sarsa};
+use rl2_monte_carlo::{Trajectory};
 // use rl3_temporal_difference::{evaluate_td};
 // use crate::ml2_decision_tree::{DecisionTree,NodeLeaf}
 
@@ -67,12 +66,17 @@ fn main() {
     }
 
 
-    let epi_policy = evaluate_td(wg_policy.clone(),wind_moves, 10000, 0.5, 1.0,0.01,vec![State { state: (0,3)}],vec![State { state: (7,3)}]);
+    let mut epi_policy = wg_policy.clone();
+    
+    for _int_j in (0..=5).rev(){
+        epi_policy = evaluate_expected_sarsa(epi_policy.clone(),wind_moves, 8000, 0.5, 1.0,0.1,vec![State { state: (0,3)}],vec![State { state: (7,3)}]);
 
-    for int_i in 0..epi_policy.state0.len(){
-        println!("prob1[{}]{:?} :{:?}",int_i,epi_policy.state0[int_i].state,epi_policy.prob1[int_i].clone());
+        for int_i in 0..epi_policy.state0.len(){
+            println!("prob1[{}]{:?} :{:?}",int_i,epi_policy.state0[int_i].state,epi_policy.prob1[int_i].clone());
+        }
+        println!("-----------------------------------------------");
     }
-    println!("-----------------------------------------------");
+
 
     
 }
@@ -97,9 +101,12 @@ fn wind_moves(state: State<(isize,isize)>,action: Action<(isize,isize)>,reward: 
         _     => 0,
     };
     if state.state.0 + action.action.0 == 7 && state.state.1 + action.action.1 + wind == 3{
+        let x : isize = state.state.0 + action.action.0;
+        let y : isize = state.state.1 + action.action.1 + wind;
+        println!("wind:{:?}, s: {:?}, a: {:?} => ({:?},{:?})",wind,state.state,action.action,x,y);
         (State { state: (state.state.0 + action.action.0, state.state.1 + action.action.1 + wind) }, 
         Reward { reward: 0.0}) 
-
+        
     } else {
         let mut x : isize = 0;
         if state.state.0 + action.action.0 < 0 {
@@ -112,7 +119,6 @@ fn wind_moves(state: State<(isize,isize)>,action: Action<(isize,isize)>,reward: 
         
 
         let mut y : isize = 0;
-
         if state.state.1 + action.action.1 + wind < 0 {
             y = 0;
         } else if state.state.1 + action.action.1 + wind >= 7 {
