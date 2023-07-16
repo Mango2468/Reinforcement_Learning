@@ -5,7 +5,7 @@ use crate::la1_linear_algebra::*;
 #[derive(Debug,Clone)]
 pub struct Environment<S,T,U> {
     pub state : State<S>,
-    pub action: Action<S>,
+    pub action: Action<T>,
     pub policy : Policy<S,T>,
     pub exp_result : ExpResult<S,T,U>,
     pub time  : usize, 
